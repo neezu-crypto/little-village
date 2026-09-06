@@ -24,17 +24,24 @@
     return canvas.height * GROUND_Y_RATIO;
   }
 
-  // 원경 실루엣(0.25배) — 장식용, 구역 콘텐츠와 무관.
-  var FAR_LAYER = { depth: 0.25, color: 'rgba(255,255,255,0.10)', gap: 220, baseY: 0.4, radius: 40 };
+  // 건물 그리드 1칸 = 몇 월드px인지(25-1 소형 건물 64px 기준 - 8칸*8px=64px).
+  // pixelScale은 "월드px→화면px" 줌 배율이라 이것과는 별개 축이다 - 둘을 곱해야
+  // 실제 화면 셀 크기가 나온다. (스크린샷 확인 후 발견 - 이전엔 pixelScale만
+  // 셀 크기로 써서 건물이 16~18화면px짜리 점으로 찌그러져 있었다.)
+  var WORLD_UNIT = 8;
+
+  // 원경 언덕 실루엣(0.25배) — 지평선(땅 시작선)에 중심을 걸쳐서, 땅 채우기가
+  // 아래쪽 절반을 자연스럽게 가려 "떠 있는 얼룩"이 아니라 능선처럼 보이게 한다.
+  var FAR_LAYER = { depth: 0.25, color: 'rgba(20,18,14,0.22)', gap: 260, radius: 70 };
 
   function drawFarLayer(cameraX) {
     var w = visibleWorldWidth();
     var offset = (cameraX * FAR_LAYER.depth) % FAR_LAYER.gap;
-    var y = canvas.height * FAR_LAYER.baseY;
+    var y = groundScreenY();
     ctx.fillStyle = FAR_LAYER.color;
     for (var x = -offset - FAR_LAYER.gap; x < w + FAR_LAYER.gap; x += FAR_LAYER.gap) {
       ctx.beginPath();
-      ctx.ellipse(x * pixelScale, y, FAR_LAYER.gap * 0.4 * pixelScale, FAR_LAYER.radius * pixelScale * 0.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(x * pixelScale, y, FAR_LAYER.gap * 0.5 * pixelScale, FAR_LAYER.radius * pixelScale, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -43,7 +50,7 @@
     var sx = worldToScreenX(obj.x, cameraX);
     if (sx < -60 || sx > canvas.width + 60) return; // 화면 밖 컬링
     var gy = groundScreenY();
-    var cell = pixelScale;
+    var cell = pixelScale * WORLD_UNIT * 0.5; // 오브젝트는 건물보다 한 단계 작게
     ctx.save();
     switch (obj.type) {
       case 'field':
@@ -87,7 +94,7 @@
     var buildingsByIndex = {};
     global.Village.getBuildings().forEach(function (b) { buildingsByIndex[b.slotIndex] = b; });
     var gy = groundScreenY();
-    var cell = pixelScale;
+    var cell = pixelScale * WORLD_UNIT;
 
     slots.forEach(function (slot) {
       var sx = worldToScreenX(slot.x, cameraX);
@@ -116,8 +123,8 @@
 
     drawFarLayer(cameraX);
 
-    // 지면선
-    ctx.fillStyle = '#3f4a35';
+    // 지면 — 팔레트 땅색을 그대로 써서 시대마다 달라지게(6-2)
+    ctx.fillStyle = paletteEra.groundColor;
     ctx.fillRect(0, groundScreenY(), w, h - groundScreenY());
 
     global.World.OBJECTS.forEach(function (obj) { drawObject(obj, cameraX); });
