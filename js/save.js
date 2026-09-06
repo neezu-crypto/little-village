@@ -13,7 +13,8 @@
       schemaVersion: SCHEMA_VERSION,
       eraDays: global.Time.getEraDays(),
       cyclePhase: global.Time.getCyclePhase(),
-      cameraX: global.Camera.x
+      cameraX: global.Camera.x,
+      village: global.Village.serialize()
     };
   }
 
@@ -22,6 +23,7 @@
     global.Time.setEraDays(state.eraDays || 0);
     global.Time.setCyclePhase(state.cyclePhase || 0);
     if (typeof state.cameraX === 'number') global.Camera.setX(state.cameraX);
+    global.Village.restore(state.village);
     return true;
   }
 
