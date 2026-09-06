@@ -78,7 +78,40 @@
     panel.classList.add('hidden');
   }
 
+  // 15장 개입 아이템 배치 모드 — 트레이에서 하나 고르면 다음 캔버스 클릭이
+  // 주민 탭 대신 배치로 처리된다.
+  var armedType = null;
+  var itemButtons = document.querySelectorAll('.item-btn');
+  var itemRemainingEl = document.getElementById('itemRemaining');
+
+  function updateItemTray() {
+    if (itemRemainingEl) itemRemainingEl.textContent = String(global.Intervention.getRemainingToday());
+  }
+
+  itemButtons.forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var type = btn.getAttribute('data-type');
+      if (armedType === type) {
+        armedType = null;
+        btn.classList.remove('armed');
+        return;
+      }
+      itemButtons.forEach(function (b) { b.classList.remove('armed'); });
+      armedType = type;
+      btn.classList.add('armed');
+    });
+  });
+
   function handleTapAt(screenX, screenY) {
+    if (armedType) {
+      var worldX = global.Camera.x + screenX / global.Render.getPixelScale();
+      global.Intervention.placeItem(armedType, worldX);
+      armedType = null;
+      itemButtons.forEach(function (b) { b.classList.remove('armed'); });
+      updateItemTray();
+      return;
+    }
     var v = findVillagerAt(screenX, screenY);
     if (v) {
       showPanel(v, screenX, screenY);
@@ -86,6 +119,9 @@
       hidePanel();
     }
   }
+
+  updateItemTray();
+  setInterval(updateItemTray, 2000); // 하루 제한 리셋 등 반영 - 실시간 주기(배속 무관 UI 동기화)
 
   canvas.addEventListener('click', function (e) {
     handleTapAt(e.clientX, e.clientY);
@@ -123,6 +159,15 @@
       html += events.slice().reverse().slice(0, 30).map(function (e) {
         return '<div class="journal-line">' + e.text + '</div>';
       }).join('');
+    }
+    var snapshots = global.Journal.getSnapshots();
+    html += '<h3>풍경 앨범 (' + snapshots.length + ')</h3>';
+    if (!snapshots.length) {
+      html += '<p class="journal-empty">아직 찍힌 풍경이 없어요.</p>';
+    } else {
+      html += '<div class="journal-gallery">' + snapshots.slice().reverse().map(function (s) {
+        return '<img src="' + s.dataUrl + '" alt="' + s.label + '" title="' + s.label + '" />';
+      }).join('') + '</div>';
     }
     html += '<h3>완료된 이야기 (' + stories.length + ')</h3>';
     if (!stories.length) {

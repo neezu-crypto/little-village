@@ -23,7 +23,10 @@
       global.Camera.update(deltaTime);
       if (global.Mobile && global.Mobile.updateMomentum) global.Mobile.updateMomentum(deltaTime);
       global.Time.update(simDeltaTime);
+      global.Weather.update(simDeltaTime);
+      global.Intervention.update();
       global.Villagers.update(simDeltaTime);
+      global.VillageEvents.update(simDeltaTime);
       global.Save.update(deltaTime);
       syncEra();
       global.Render.draw();

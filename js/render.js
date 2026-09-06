@@ -132,7 +132,7 @@
         ctx.font = Math.round(14 * pixelScale / 3) + 'px sans-serif';
         ctx.fillText(indicator, sx, headY - 4);
       }
-      if (v.state === 'social' && v.speechText) {
+      if (v.speechText) {
         ctx.font = Math.round(11 * pixelScale / 3) + 'px ' + FONT_STACK;
         var textW = ctx.measureText(v.speechText).width;
         var boxY = headY - 24;
@@ -141,6 +141,106 @@
         ctx.fillStyle = '#eee7d8';
         ctx.fillText(v.speechText, sx, boxY);
       }
+    });
+    ctx.textAlign = 'left';
+  }
+
+  // 7장 시간대 틴트 — 시대 팔레트 그라데이션 위에 곱해서 얹는다.
+  var PHASE_TINT = {
+    morning: 'rgba(255,200,140,0.12)',
+    day: 'rgba(0,0,0,0)',
+    evening: 'rgba(255,110,60,0.18)',
+    night: 'rgba(15,20,55,0.35)'
+  };
+
+  function drawTimeTint() {
+    var phase = global.Time ? global.Time.getPhaseName() : 'day';
+    var color = PHASE_TINT[phase];
+    if (!color) return;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawWeatherTint() {
+    if (!global.Weather || !global.Weather.isRaining()) return;
+    ctx.fillStyle = 'rgba(70,80,100,0.22)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 25-6 자연 확장 - 비 파티클(화면 전체에 대각선으로 떨어지는 짧은 선분)
+  function drawRainParticles() {
+    if (!global.Weather || !global.Weather.isRaining()) return;
+    var t = Date.now() / 1000;
+    ctx.strokeStyle = 'rgba(180,200,220,0.35)';
+    ctx.lineWidth = Math.max(1, pixelScale * 0.5);
+    var spacing = 40;
+    for (var x = -spacing; x < canvas.width + spacing; x += spacing) {
+      var yOffset = ((t * 300 + x * 3) % (canvas.height + 40)) - 20;
+      ctx.beginPath();
+      ctx.moveTo(x, yOffset);
+      ctx.lineTo(x - 8, yOffset + 16);
+      ctx.stroke();
+    }
+  }
+
+  // 14장 장이 서는 날 - 상점가에 임시 좌판
+  function drawMarketStalls(cameraX) {
+    if (!global.VillageEvents || !global.VillageEvents.isMarketDay()) return;
+    var market = global.World.zoneById('market');
+    var cell = pixelScale * WORLD_UNIT * 0.4;
+    var gy = groundScreenY();
+    [0.25, 0.75].forEach(function (frac) {
+      var sx = worldToScreenX(market.startPx + market.widthPx * frac, cameraX);
+      if (sx < -60 || sx > canvas.width + 60) return;
+      ctx.fillStyle = '#B25A2E';
+      ctx.fillRect(sx - 4 * cell, gy - 6 * cell, 8 * cell, 1.5 * cell);
+      ctx.fillStyle = '#7a6248';
+      ctx.fillRect(sx - 3 * cell, gy - 4.5 * cell, 6 * cell, 4.5 * cell);
+    });
+  }
+
+  // 14장 비 온 뒤 무지개
+  function drawRainbow() {
+    if (!global.VillageEvents || !global.VillageEvents.isRainbowActive()) return;
+    var colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    var cx = canvas.width / 2, cy = groundScreenY();
+    var baseR = canvas.width * 0.35;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 6;
+    colors.forEach(function (c, i) {
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseR - i * 7, Math.PI, 0);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // 14장 밤하늘 유성
+  function drawMeteor() {
+    if (!global.VillageEvents || !global.VillageEvents.isMeteorActive()) return;
+    var t = (Date.now() / 1000) % 1;
+    var x1 = canvas.width * 0.2 + t * canvas.width * 0.5;
+    var y1 = canvas.height * 0.1 + t * canvas.height * 0.2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - 40, y1 - 20);
+    ctx.stroke();
+  }
+
+  // 15장 배치된 개입 아이템
+  function drawInterventionItems(cameraX) {
+    if (!global.Intervention) return;
+    var types = global.Intervention.getItemTypes();
+    var gy = groundScreenY();
+    ctx.textAlign = 'center';
+    ctx.font = Math.round(16 * pixelScale / 3) + 'px sans-serif';
+    global.Intervention.getItems().forEach(function (it) {
+      var sx = worldToScreenX(it.x, cameraX);
+      if (sx < -30 || sx > canvas.width + 30) return;
+      ctx.fillText(types[it.type].icon, sx, gy - 4);
     });
     ctx.textAlign = 'left';
   }
@@ -162,9 +262,16 @@
     ctx.fillStyle = paletteEra.groundColor;
     ctx.fillRect(0, groundScreenY(), w, h - groundScreenY());
 
+    drawRainbow();
     global.World.OBJECTS.forEach(function (obj) { drawObject(obj, cameraX, paletteEra); });
+    drawMarketStalls(cameraX);
+    drawInterventionItems(cameraX);
     drawBuildings(cameraX);
     drawVillagers(cameraX);
+    drawMeteor();
+    drawTimeTint();
+    drawWeatherTint();
+    drawRainParticles();
   }
 
   window.addEventListener('resize', resize);

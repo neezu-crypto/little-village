@@ -6,10 +6,11 @@
   // 4: 건물 capacity/ageDecay, 주민 wealth/assets/recentFarmWork 필드 추가(7단계).
   // 5: 주민 arrivalDay/moveOutCheckAcc/leaving* 필드 추가(8단계) - 없으면
   // arrivalDay가 undefined라 거주일수 계산이 NaN이 돼 이탈 판정이 조용히 항상 거짓이 됨.
+  // 6: weather/villageEvents/intervention 필드 추가(9단계).
   // 저장 구조가 바뀌면(필드 추가/제거) 반드시 이 값을 올려서 구버전 저장을
   // 거부하고 새로 스폰하게 한다 - 5단계에서 이걸 빠뜨려 주민이 영영 0명으로
   // 남는 버그가 났었다.
-  var SCHEMA_VERSION = 5;
+  var SCHEMA_VERSION = 6;
   var AUTOSAVE_INTERVAL = 10; // seconds
   var indicator = document.getElementById('saveIndicator');
   var tabNotice = document.getElementById('tabConflictNotice');
@@ -24,7 +25,10 @@
       village: global.Village.serialize(),
       villagers: global.Villagers.serialize(),
       relationships: global.Relationships.serialize(),
-      journal: global.Journal.serialize()
+      journal: global.Journal.serialize(),
+      weather: global.Weather.serialize(),
+      villageEvents: global.VillageEvents.serialize(),
+      intervention: global.Intervention.serialize()
     };
   }
 
@@ -37,6 +41,9 @@
     global.Villagers.restore(state.villagers);
     global.Relationships.restore(state.relationships);
     global.Journal.restore(state.journal);
+    global.Weather.restore(state.weather);
+    global.VillageEvents.restore(state.villageEvents);
+    global.Intervention.restore(state.intervention);
     return true;
   }
 

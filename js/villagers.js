@@ -46,6 +46,7 @@
       tickInterval: randRange(4, 8),
       needs: { hunger: 0, fatigue: 0, loneliness: 0, vanity: 0 },
       speechText: null,
+      speechTimer: 0,
       socialPartnerId: null,
       wealth: 0,
       assets: { livestock: null, vehicle: null },
@@ -116,13 +117,16 @@
 
   // ---------- 8-3 휴식→이동 전이 확률 ----------
   function timeOfDayBonus() {
+    var base;
     switch (global.Time.getPhaseName()) {
-      case 'morning': return 0.20;
-      case 'day': return 0.10;
-      case 'evening': return 0.0;
-      case 'night': return -0.20;
-      default: return 0;
+      case 'morning': base = 0.20; break;
+      case 'day': base = 0.10; break;
+      case 'evening': base = 0.0; break;
+      case 'night': base = -0.20; break;
+      default: base = 0;
     }
+    if (global.Weather && global.Weather.isRaining()) base -= 0.10; // 7장 비 보정
+    return base;
   }
 
   function desireBonus(v) {
@@ -134,39 +138,58 @@
   // 문서의 weight.random=15(고정)과 weight.work/social(0~1 스케일)은 그대로 비교하면
   // random이 항상 압도적으로 이겨버려서, 세 값 전부 0~100 스케일로 맞춰 해석했다
   // (구현 판단 - 욕구값을 100분율 그대로 사용, random은 15를 그 스케일의 기본값으로 취급).
+  // 7장 비: 작업 목적지 선호 감소(구현 판단, 문서에 정확한 수치 없음).
+  // 15장 개입 아이템: 배치된 아이템 중 자신의 욕구와 맞는 게 있으면 새 목적지 후보로 추가.
   function chooseDestination(v) {
     var p = getPersonality(v);
-    var wWork = v.needs.hunger;
+    var weatherWorkMul = (global.Weather && global.Weather.isRaining()) ? 0.7 : 1.0;
+    var wWork = v.needs.hunger * weatherWorkMul;
     var wSocial = v.needs.loneliness * p.socialWeightMul;
     var wRandom = 15 * p.randomWeightMul;
-    var total = wWork + wSocial + wRandom;
+    var itemPick = global.Intervention ? global.Intervention.pickBestItem(v) : null;
+    var wItem = itemPick ? itemPick.weight : 0;
+    var total = wWork + wSocial + wRandom + wItem;
     var r = Math.random() * total;
-    if (r < wWork) return 'work';
-    if (r < wWork + wSocial) return 'social';
-    return 'random';
+    if (r < wWork) return { category: 'work' };
+    r -= wWork;
+    if (r < wSocial) return { category: 'social' };
+    r -= wSocial;
+    if (r < wRandom) return { category: 'random' };
+    return { category: 'item', item: itemPick.item };
   }
 
-  function nearestWorkObject(x) {
+  // 14장 장이 서는 날: 상점가(가게) 선호 가중. 기본은 거리 감쇠로 가까운 곳을 선호.
+  function pickWorkObject(x) {
     var objs = global.World.OBJECTS.filter(function (o) { return WORK_TYPES.indexOf(o.type) !== -1; });
-    var best = null, bestDist = Infinity;
-    objs.forEach(function (o) {
-      var d = Math.abs(o.x - x);
-      if (d < bestDist) { bestDist = d; best = o; }
+    var isMarketDay = global.VillageEvents && global.VillageEvents.isMarketDay();
+    var weights = objs.map(function (o) {
+      var w = 1 / (1 + Math.abs(o.x - x) / 500);
+      if (isMarketDay && o.type === 'shop') w *= 1.3;
+      return w;
     });
-    return best;
+    var total = weights.reduce(function (a, b) { return a + b; }, 0);
+    var r = Math.random() * total;
+    for (var i = 0; i < objs.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return objs[i];
+    }
+    return objs[objs.length - 1];
   }
 
   function startMove(v) {
-    var category = chooseDestination(v);
-    v.targetType = category;
-    if (category === 'work') {
-      var obj = nearestWorkObject(v.x);
+    var choice = chooseDestination(v);
+    v.targetType = choice.category;
+    if (choice.category === 'work') {
+      var obj = pickWorkObject(v.x);
       v.targetObject = obj;
       v.targetX = obj.x;
-    } else if (category === 'social') {
+    } else if (choice.category === 'social') {
       var square = global.World.zoneById('square');
       v.targetX = square.startPx + Math.random() * square.widthPx;
       v.targetObject = null;
+    } else if (choice.category === 'item') {
+      v.targetObject = choice.item;
+      v.targetX = choice.item.x;
     } else {
       var radius = 300;
       v.targetX = Math.max(0, Math.min(global.World.WORLD_WIDTH_PX, v.x + (Math.random() * 2 - 1) * radius));
@@ -207,11 +230,19 @@
       v.state = 'work';
       v.stateTimer = 0;
       v.minStateDuration = randRange(v.targetObject.minDuration[0], v.targetObject.minDuration[1]);
-    } else {
-      v.state = 'rest';
-      v.stateTimer = 0;
-      v.minStateDuration = randRange(5, 8);
+      return;
     }
+    if (v.targetType === 'item' && v.targetObject) {
+      var consumed = global.Intervention.consumeItem(v.targetObject.id);
+      if (consumed) {
+        v.needs[consumed.needKey] = clampNeed(v.needs[consumed.needKey] - randRange(20, 30));
+        v.speechText = '고마워요!';
+        v.speechTimer = 3;
+      }
+    }
+    v.state = 'rest';
+    v.stateTimer = 0;
+    v.minStateDuration = randRange(5, 8);
   }
 
   function startSocial(a, b, forcedPoolKey) {
@@ -243,7 +274,8 @@
       if (Math.random() < chance) startMove(v);
     } else if (v.state === 'work') {
       if (v.stateTimer < v.minStateDuration) return;
-      if (Math.random() < 0.20) endWork(v);
+      var endChance = 0.20 + ((global.Weather && global.Weather.isRaining()) ? 0.15 : 0); // 8-6 비 +15%p
+      if (Math.random() < endChance) endWork(v);
     }
   }
 
@@ -288,6 +320,11 @@
       updateNeeds(v, dt);
       updateMovement(v, dt);
       v.stateTimer += dt;
+
+      if (v.speechTimer > 0) {
+        v.speechTimer -= dt;
+        if (v.speechTimer <= 0 && v.state !== 'social') v.speechText = null;
+      }
 
       v.tickAcc += dt;
       if (v.tickAcc >= v.tickInterval) {

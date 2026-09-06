@@ -221,11 +221,67 @@ html, body {
   font-size: 11.5px;
 }
 
+.journal-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.journal-gallery img {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: block;
+}
+
 .journal-line {
   font-size: 12.5px;
   color: var(--ink-dim);
   padding: 5px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* 15장: 개입 아이템 트레이 — 화면 하단 고정(25-4) */
+.item-tray {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  z-index: 25;
+}
+
+.item-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.item-btn.armed {
+  background: rgba(232, 118, 60, 0.25);
+  border-color: var(--ember, #e8763c);
+}
+
+.item-btn:focus-visible {
+  outline: 2px solid var(--ink-dim);
+  outline-offset: 2px;
+}
+
+.item-remaining {
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  padding-left: 4px;
 }
 
 /* 4-1: iOS Safari 등 orientation lock 미지원 환경을 위한 CSS 강제 회전 폴백 */

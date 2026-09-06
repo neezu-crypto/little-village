@@ -1,11 +1,30 @@
-// 11장: 발견 일지 — 클릭한 주민 프로필 + 목격한 대화 + 주민 도착/작별(16장).
-// 스냅샷(11-1)은 그 트리거(시대 팔레트 전환/무지개/유성)가 아직 없는 단계라 보류.
+// 11장: 발견 일지 — 클릭한 주민 프로필 + 목격한 대화 + 주민 도착/작별(16장) + 풍경 스냅샷(11-1).
 (function (global) {
   var discovered = {}; // id -> { id, name, personalityId, firstSeenDay }
   var witnessedSet = {};
   var witnessedLog = []; // { line, day }
   var completedStories = []; // 16-2: 떠난 주민 - 삭제 아니라 완료된 이야기로 보관
   var lifeEvents = []; // { text, day } - 도착/작별 로그
+  var snapshots = []; // 11-1: { dataUrl, label, day }
+  var SNAPSHOT_CAP = 30;
+
+  // 11-1/11-2: 160x120 썸네일 + JPEG 압축, 최근 30장만 유지(오래된 것부터 삭제).
+  function captureSnapshot(label) {
+    var src = global.Render && global.Render.canvas;
+    if (!src) return;
+    try {
+      var thumb = document.createElement('canvas');
+      thumb.width = 160;
+      thumb.height = 120;
+      thumb.getContext('2d').drawImage(src, 0, 0, src.width, src.height, 0, 0, 160, 120);
+      snapshots.push({ dataUrl: thumb.toDataURL('image/jpeg', 0.65), label: label, day: Math.floor(global.Time.getEraDays()) });
+      if (snapshots.length > SNAPSHOT_CAP) snapshots.shift();
+      renderIfOpen();
+    } catch (e) {
+      console.error('스냅샷 캡처 실패:', e);
+    }
+  }
+  function getSnapshots() { return snapshots; }
 
   function discoverVillager(v) {
     if (discovered[v.id]) return;
@@ -62,7 +81,8 @@
       witnessedSet: witnessedSet,
       witnessedLog: witnessedLog,
       completedStories: completedStories,
-      lifeEvents: lifeEvents
+      lifeEvents: lifeEvents,
+      snapshots: snapshots
     };
   }
   function restore(data) {
@@ -72,6 +92,7 @@
     witnessedLog = data.witnessedLog || [];
     completedStories = data.completedStories || [];
     lifeEvents = data.lifeEvents || [];
+    snapshots = data.snapshots || [];
     return true;
   }
 
@@ -80,11 +101,13 @@
     witnessLine: witnessLine,
     logArrival: logArrival,
     logDeparture: logDeparture,
+    captureSnapshot: captureSnapshot,
     isDiscovered: isDiscovered,
     getDiscovered: getDiscovered,
     getWitnessedLog: getWitnessedLog,
     getCompletedStories: getCompletedStories,
     getLifeEvents: getLifeEvents,
+    getSnapshots: getSnapshots,
     onChange: onChange,
     serialize: serialize,
     restore: restore
