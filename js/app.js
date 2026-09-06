@@ -1,37 +1,45 @@
-// 4단계: Day0 스폰(6-3) — 저장 데이터가 없으면 새 마을을 시작하고 카메라를 주거지 중심에 둔다.
+// 5단계: 이름 목록 로드(21장) 이후 Day0 스폰, 메인 루프에 주민 AI 갱신 추가.
 (function (global) {
   var WorldState = { currentEra: global.ERAS[0] };
   global.WorldState = WorldState;
 
   var savedState = global.Save.loadSave();
-  if (savedState) {
-    global.Save.applyState(savedState);
-  } else {
-    global.Village.initDay0();
-    var residential = global.World.zoneById('residential');
-    global.Camera.setX(residential.startPx + residential.widthPx / 2 - global.Render.getVisibleWorldWidth() / 2);
-  }
 
-  function syncEra() {
-    WorldState.currentEra = global.ERAS[global.Time.getCurrentEraIndex()];
-  }
-  syncEra();
-
-  var lastTime = performance.now();
-
-  function loop(now) {
-    var deltaTime = Math.min(0.1, (now - lastTime) / 1000); // 탭 전환 후 급점프 방지
-    lastTime = now;
-
-    global.Camera.update(deltaTime);
-    if (global.Mobile && global.Mobile.updateMomentum) global.Mobile.updateMomentum(deltaTime);
-    global.Time.update(deltaTime);
-    global.Save.update(deltaTime);
+  function afterInit() {
+    function syncEra() {
+      WorldState.currentEra = global.ERAS[global.Time.getCurrentEraIndex()];
+    }
     syncEra();
-    global.Render.draw();
 
+    var lastTime = performance.now();
+    function loop(now) {
+      var deltaTime = Math.min(0.1, (now - lastTime) / 1000); // 탭 전환 후 급점프 방지
+      lastTime = now;
+
+      global.Camera.update(deltaTime);
+      if (global.Mobile && global.Mobile.updateMomentum) global.Mobile.updateMomentum(deltaTime);
+      global.Time.update(deltaTime);
+      global.Villagers.update(deltaTime);
+      global.Save.update(deltaTime);
+      syncEra();
+      global.Render.draw();
+
+      requestAnimationFrame(loop);
+    }
     requestAnimationFrame(loop);
   }
 
-  requestAnimationFrame(loop);
+  if (savedState) {
+    global.Save.applyState(savedState);
+    global.Names.load(); // 이후 이사 등 신규 스폰을 대비해 조용히 로드만 해둠
+    afterInit();
+  } else {
+    global.Names.load().then(function () {
+      global.Village.initDay0();
+      global.Villagers.initDay0();
+      var residential = global.World.zoneById('residential');
+      global.Camera.setX(residential.startPx + residential.widthPx / 2 - global.Render.getVisibleWorldWidth() / 2);
+      afterInit();
+    });
+  }
 })(window);

@@ -14,7 +14,8 @@
       eraDays: global.Time.getEraDays(),
       cyclePhase: global.Time.getCyclePhase(),
       cameraX: global.Camera.x,
-      village: global.Village.serialize()
+      village: global.Village.serialize(),
+      villagers: global.Villagers.serialize()
     };
   }
 
@@ -24,6 +25,7 @@
     global.Time.setCyclePhase(state.cyclePhase || 0);
     if (typeof state.cameraX === 'number') global.Camera.setX(state.cameraX);
     global.Village.restore(state.village);
+    global.Villagers.restore(state.villagers);
     return true;
   }
 

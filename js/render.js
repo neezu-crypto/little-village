@@ -77,6 +77,18 @@
     });
   }
 
+  function drawVillagers(cameraX) {
+    if (!global.Villagers) return;
+    var cell = pixelScale * global.CharacterSprites.UNIT;
+    var gy = groundScreenY();
+    global.Villagers.getVillagers().forEach(function (v) {
+      var sx = worldToScreenX(v.x, cameraX);
+      var margin = global.CharacterSprites.GRID_W * cell;
+      if (sx < -margin || sx > canvas.width + margin) return;
+      global.CharacterSprites.draw(ctx, cell, sx, gy, v.facing);
+    });
+  }
+
   function draw() {
     var paletteEra = (global.Village && global.Village.getMajorityEra()) || global.WorldState.currentEra;
     var cameraX = (global.Camera && global.Camera.x) || 0;
@@ -96,6 +108,7 @@
 
     global.World.OBJECTS.forEach(function (obj) { drawObject(obj, cameraX, paletteEra); });
     drawBuildings(cameraX);
+    drawVillagers(cameraX);
   }
 
   window.addEventListener('resize', resize);
