@@ -29,8 +29,12 @@
     requestAnimationFrame(loop);
   }
 
-  if (savedState) {
-    global.Save.applyState(savedState);
+  // applyState는 저장이 없거나 schemaVersion이 안 맞으면 false를 반환한다 -
+  // 이 경우를 체크 안 하면(예전 버그) 구버전 저장을 조용히 무시한 채 Day0
+  // 스폰도 안 돌아서 주민이 영영 0명으로 남는다.
+  var restored = savedState && global.Save.applyState(savedState);
+
+  if (restored) {
     global.Names.load(); // 이후 이사 등 신규 스폰을 대비해 조용히 로드만 해둠
     afterInit();
   } else {

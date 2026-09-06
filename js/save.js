@@ -2,7 +2,11 @@
 // collectState/applyState는 이후 단계(주민·건물 등)가 생길 때마다 필드를 늘려간다.
 (function (global) {
   var SAVE_KEY = 'littleVillageSave';
-  var SCHEMA_VERSION = 1;
+  // 2: villagers 필드 추가(5단계) - 그 이전 저장은 village/villagers가 없어
+  // 그대로 복원하면 Day0 스폰이 영영 안 도는 버그가 있었다. 앞으로도 저장
+  // 구조가 바뀌면(필드 추가/제거) 반드시 이 값을 올려서 구버전 저장을
+  // 거부하고 새로 스폰하게 한다.
+  var SCHEMA_VERSION = 2;
   var AUTOSAVE_INTERVAL = 10; // seconds
   var indicator = document.getElementById('saveIndicator');
   var tabNotice = document.getElementById('tabConflictNotice');
