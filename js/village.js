@@ -20,8 +20,8 @@
     populationCap = randInt(primitive.populationCapRange[0], primitive.populationCapRange[1]);
     buildings = [];
     // 6-3: 시작 건물 2채(3명+1명 배분), 전부 gradeIndex 0.
-    buildings.push({ slotIndex: 0, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 3, capacity: 3, ageDecay: 0 });
-    buildings.push({ slotIndex: 1, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 1, capacity: primitive.residentsPerBuilding, ageDecay: 0 });
+    buildings.push({ slotIndex: 0, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 3, capacity: 3, ageDecay: 0, lightSeed: Math.random() });
+    buildings.push({ slotIndex: 1, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 1, capacity: primitive.residentsPerBuilding, ageDecay: 0, lightSeed: Math.random() });
   }
 
   function getBuildings() {
@@ -39,7 +39,7 @@
 
   // 17-1 신축 — buildingLifecycle.js가 빈 슬롯에 새 건물을 세울 때 사용.
   function constructBuilding(slotIndex, era) {
-    var b = { slotIndex: slotIndex, occupied: true, builtEraId: era.id, gradeIndex: 0, residentCount: 0, capacity: resolveCapacity(era), ageDecay: 0 };
+    var b = { slotIndex: slotIndex, occupied: true, builtEraId: era.id, gradeIndex: 0, residentCount: 0, capacity: resolveCapacity(era), ageDecay: 0, lightSeed: Math.random() };
     buildings.push(b);
     return b;
   }

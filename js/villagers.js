@@ -57,7 +57,8 @@
       leaving: false,
       leavingPhase: null, // 'preparing' | 'departing'
       leavingTimer: 0,
-      leavingDuration: 0
+      leavingDuration: 0,
+      fashionEraId: global.WorldState.currentEra.id // 25-7 스폰 시점 시대에 고정, 이후 안 바뀜
     };
     villagers.push(v);
     return v;
@@ -238,6 +239,7 @@
         v.needs[consumed.needKey] = clampNeed(v.needs[consumed.needKey] - randRange(20, 30));
         v.speechText = '고마워요!';
         v.speechTimer = 3;
+        global.Sound.playThanks();
       }
     }
     v.state = 'rest';

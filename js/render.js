@@ -71,7 +71,8 @@
       var b = buildingsByIndex[slot.index];
       if (b && b.occupied) {
         var era = global.ERAS.filter(function (e) { return e.id === b.builtEraId; })[0] || global.WorldState.currentEra;
-        global.BuildingSprites.draw(ctx, era, b.gradeIndex, cell, sx, gy);
+        var isWorking = global.Villagers && global.Villagers.getVillagers().some(function (v) { return v.homeSlotIndex === b.slotIndex && v.state === 'work'; });
+        global.BuildingSprites.draw(ctx, era, b.gradeIndex, cell, sx, gy, { lightSeed: b.lightSeed || 0, isWorking: isWorking });
         drawHomeAssets(b, era, sx, gy);
       } else {
         global.BuildingSprites.drawEmptyLot(ctx, cell, sx, gy);
@@ -125,7 +126,7 @@
       var sx = worldToScreenX(v.x, cameraX);
       var margin = global.CharacterSprites.GRID_W * cell;
       if (sx < -margin || sx > canvas.width + margin) return;
-      global.CharacterSprites.draw(ctx, cell, sx, gy, v.facing);
+      global.CharacterSprites.draw(ctx, cell, sx, gy, v.facing, v.fashionEraId, v.id);
 
       var indicator = getIndicator(v);
       if (indicator) {

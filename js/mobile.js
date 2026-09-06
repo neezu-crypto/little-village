@@ -138,6 +138,7 @@
   global.Mobile = {
     isMobile: isMobile,
     updateMomentum: updateMomentum,
-    exitLandscapeMode: exitLandscapeMode
+    exitLandscapeMode: exitLandscapeMode,
+    enterLandscapeMode: attemptLandscapeLock // 25-8 설정창 "재진입" 버튼용
   };
 })(window);

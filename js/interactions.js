@@ -50,6 +50,7 @@
   }
 
   function showPanel(v, screenX, screenY) {
+    global.Sound.playClick();
     global.Journal.discoverVillager(v);
     var closest = global.Relationships.closestPartner(v.id);
     var closestLine = '';
@@ -106,7 +107,7 @@
   function handleTapAt(screenX, screenY) {
     if (armedType) {
       var worldX = global.Camera.x + screenX / global.Render.getPixelScale();
-      global.Intervention.placeItem(armedType, worldX);
+      if (global.Intervention.placeItem(armedType, worldX)) global.Sound.playPlace();
       armedType = null;
       itemButtons.forEach(function (b) { b.classList.remove('armed'); });
       updateItemTray();
