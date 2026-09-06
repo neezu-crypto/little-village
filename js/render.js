@@ -46,47 +46,14 @@
     }
   }
 
-  function drawObject(obj, cameraX) {
+  function drawObject(obj, cameraX, era) {
     var sx = worldToScreenX(obj.x, cameraX);
-    if (sx < -60 || sx > canvas.width + 60) return; // 화면 밖 컬링
+    if (sx < -80 || sx > canvas.width + 80) return; // 화면 밖 컬링
     var gy = groundScreenY();
     var cell = pixelScale * WORLD_UNIT * 0.5; // 오브젝트는 건물보다 한 단계 작게
-    ctx.save();
-    switch (obj.type) {
-      case 'field':
-        ctx.fillStyle = '#5c7a3f';
-        for (var r = 0; r < 3; r++) ctx.fillRect(sx - 5 * cell, gy - (r + 1) * cell * 1.5, 10 * cell, cell);
-        break;
-      case 'well':
-        ctx.fillStyle = '#8c8677';
-        ctx.beginPath();
-        ctx.arc(sx, gy - 2 * cell, 4 * cell, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#4a4438';
-        ctx.beginPath();
-        ctx.arc(sx, gy - 2 * cell, 2 * cell, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      case 'hearth':
-        ctx.fillStyle = '#4a4438';
-        ctx.fillRect(sx - 3 * cell, gy - cell, 6 * cell, cell);
-        ctx.fillStyle = '#E8763C';
-        ctx.beginPath();
-        ctx.arc(sx, gy - 2.5 * cell, 2.5 * cell, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      case 'shop':
-        ctx.fillStyle = '#7a6248';
-        ctx.fillRect(sx - 5 * cell, gy - 8 * cell, 10 * cell, 8 * cell);
-        ctx.fillStyle = '#B89A5A';
-        ctx.fillRect(sx - 6 * cell, gy - 9 * cell, 12 * cell, 2 * cell);
-        break;
-      case 'bench':
-        ctx.fillStyle = '#6E6259';
-        ctx.fillRect(sx - 3 * cell, gy - 1.5 * cell, 6 * cell, 1.5 * cell);
-        break;
-    }
-    ctx.restore();
+    var fn = global.ObjectSprites[obj.type];
+    if (!fn) return;
+    fn(ctx, cell, sx, gy, era);
   }
 
   function drawBuildings(cameraX) {
@@ -127,7 +94,7 @@
     ctx.fillStyle = paletteEra.groundColor;
     ctx.fillRect(0, groundScreenY(), w, h - groundScreenY());
 
-    global.World.OBJECTS.forEach(function (obj) { drawObject(obj, cameraX); });
+    global.World.OBJECTS.forEach(function (obj) { drawObject(obj, cameraX, paletteEra); });
     drawBuildings(cameraX);
   }
 
