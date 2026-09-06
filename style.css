@@ -1,0 +1,93 @@
+:root {
+  --ink: #eee7d8;
+  --ink-dim: #a89d8a;
+  --panel: rgba(33, 31, 28, 0.82);
+  --border: #423b30;
+  --sans: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #14130f;
+  overflow: hidden;
+  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#worldCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(20, 19, 15, 0.94);
+  z-index: 20;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.rotate-icon {
+  font-size: 40px;
+  animation: spin 1.8s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-icon { animation: none; }
+}
+
+.icon-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 30;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-btn.hidden {
+  display: none;
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--ink-dim);
+  outline-offset: 2px;
+}

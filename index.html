@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>little-village</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="viewport">
+    <canvas id="worldCanvas"></canvas>
+
+    <div id="rotatePrompt" class="overlay hidden">
+      <div class="rotate-icon">⟳</div>
+      <p>기기를 가로로 돌려주세요</p>
+    </div>
+
+    <button id="exitFullscreenBtn" class="icon-btn hidden" aria-label="나가기">←</button>
+  </div>
+
+  <script src="data/eras.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/mobile.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
