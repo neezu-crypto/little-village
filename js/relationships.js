@@ -76,6 +76,38 @@
     return bestVal > 0 ? { id: bestId, value: bestVal } : null;
   }
 
+  // 16-5: 룸메이트로 막 배정된 순간 최소 affinity를 보장(완전 남남 아님).
+  function setMinimum(idA, idB, minVal) {
+    var k = key(idA, idB);
+    var e = affinity[k] || { value: 0, lastDay: global.Time.getEraDays() };
+    if (e.value < minVal) e.value = minVal;
+    e.lastDay = global.Time.getEraDays();
+    affinity[k] = e;
+  }
+
+  // 16-5: 같은 집에 사는 쌍은 교류 여부와 무관하게 하루 +0.05 자동 누적,
+  // 매일 마주치는 사이라 decay 타이머도 같이 갱신(따로 안 만나도 안 멀어짐).
+  function applyRoommatePassive(villagers, dt) {
+    var byHome = {};
+    villagers.forEach(function (v) {
+      if (v.homeSlotIndex == null) return;
+      (byHome[v.homeSlotIndex] = byHome[v.homeSlotIndex] || []).push(v);
+    });
+    var today = global.Time.getEraDays();
+    Object.keys(byHome).forEach(function (slot) {
+      var group = byHome[slot];
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          var k = key(group[i].id, group[j].id);
+          var e = affinity[k] || { value: 0, lastDay: today };
+          e.value += 0.05 * dt;
+          e.lastDay = today;
+          affinity[k] = e;
+        }
+      }
+    });
+  }
+
   function serialize() { return { affinity: affinity }; }
   function restore(data) {
     affinity = (data && data.affinity) || {};
@@ -89,6 +121,8 @@
     tierLabel: tierLabel,
     tierKey: tierKey,
     closestPartner: closestPartner,
+    setMinimum: setMinimum,
+    applyRoommatePassive: applyRoommatePassive,
     serialize: serialize,
     restore: restore
   };

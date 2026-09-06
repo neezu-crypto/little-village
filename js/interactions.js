@@ -98,6 +98,8 @@
   function renderJournal() {
     var discovered = global.Journal.getDiscovered();
     var log = global.Journal.getWitnessedLog();
+    var events = global.Journal.getLifeEvents();
+    var stories = global.Journal.getCompletedStories();
     var html = '<h3>주민 (' + discovered.length + ')</h3>';
     if (!discovered.length) {
       html += '<p class="journal-empty">아직 아무도 만나보지 않았어요.</p>';
@@ -112,6 +114,22 @@
     } else {
       html += log.slice().reverse().slice(0, 30).map(function (e) {
         return '<div class="journal-line">' + e.line + '</div>';
+      }).join('');
+    }
+    html += '<h3>마을의 기록 (' + events.length + ')</h3>';
+    if (!events.length) {
+      html += '<p class="journal-empty">아직 도착하거나 떠난 사람이 없어요.</p>';
+    } else {
+      html += events.slice().reverse().slice(0, 30).map(function (e) {
+        return '<div class="journal-line">' + e.text + '</div>';
+      }).join('');
+    }
+    html += '<h3>완료된 이야기 (' + stories.length + ')</h3>';
+    if (!stories.length) {
+      html += '<p class="journal-empty">아직 마을을 떠난 사람이 없어요.</p>';
+    } else {
+      html += stories.slice().reverse().map(function (s) {
+        return '<div class="journal-entry"><b>' + s.name + '</b><span>' + PERSONALITY_LABEL[s.personalityId] + '</span></div>';
       }).join('');
     }
     journalList.innerHTML = html;

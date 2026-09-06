@@ -105,6 +105,7 @@
 
   function getIndicator(v) {
     if (v.state === 'social') return '💬';
+    if (v.leaving) return '🧳'; // 16-2 떠날 준비/퇴장 중
     if (v.state === 'work') return '🔨';
     var needs = v.needs, maxKey = null, maxVal = 0;
     ['hunger', 'fatigue', 'loneliness', 'vanity'].forEach(function (k) {

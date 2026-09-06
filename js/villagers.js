@@ -28,11 +28,11 @@
     return list[list.length - 1];
   }
 
-  function spawnVillager(homeSlotIndex, x) {
+  function spawnVillager(homeSlotIndex, x, forcedPersonalityId) {
     var v = {
       id: nextId++,
       name: global.Names.pick(),
-      personalityId: pickPersonality().id,
+      personalityId: forcedPersonalityId || pickPersonality().id,
       homeSlotIndex: homeSlotIndex,
       x: x,
       facing: 1,
@@ -50,10 +50,34 @@
       wealth: 0,
       assets: { livestock: null, vehicle: null },
       recentFarmWork: [], // 19-1 가축 구매 조건용 - {field,hearth} 작업 완료 날짜 기록
-      assetCheckAcc: 0
+      assetCheckAcc: 0,
+      arrivalDay: global.Time.getEraDays(), // 16-2 거주 자격(90일) 판정용
+      moveOutCheckAcc: 0,
+      leaving: false,
+      leavingPhase: null, // 'preparing' | 'departing'
+      leavingTimer: 0,
+      leavingDuration: 0
     };
     villagers.push(v);
     return v;
+  }
+
+  // 16-1 이사 오는 주민 — migration.js 전용 진입점(성격을 미리 정해서 넘김).
+  function spawnMigrant(homeSlotIndex, personalityId, x) {
+    return spawnVillager(homeSlotIndex, x, personalityId);
+  }
+
+  function removeVillager(id) {
+    villagers = villagers.filter(function (v) { return v.id !== id; });
+  }
+
+  // 16-2 작별 인사 등 - migration.js가 특정 대화 풀을 강제 지정해 교류를 걸 때 사용.
+  function forceSocial(idA, idB, poolKey) {
+    var a = villagers.filter(function (v) { return v.id === idA; })[0];
+    var b = villagers.filter(function (v) { return v.id === idB; })[0];
+    if (!a || !b) return false;
+    startSocial(a, b, poolKey);
+    return true;
   }
 
   function getPersonality(v) {
@@ -175,6 +199,10 @@
   }
 
   function arriveAtDestination(v) {
+    if (v.targetType === 'leaving') {
+      v.readyToRemove = true; // 16-2 퇴장 완료 - update()에서 실제 제거
+      return;
+    }
     if (v.targetType === 'work' && v.targetObject) {
       v.state = 'work';
       v.stateTimer = 0;
@@ -186,10 +214,11 @@
     }
   }
 
-  function startSocial(a, b) {
+  function startSocial(a, b, forcedPoolKey) {
     var duration = randRange(8, 15);
     var currentAffinity = global.Relationships.get(a.id, b.id);
-    var line = global.Dialogue.pickLine(global.Relationships.tierKey(currentAffinity));
+    var poolKey = forcedPoolKey || global.Relationships.tierKey(currentAffinity);
+    var line = global.Dialogue.pickLine(poolKey);
     global.Journal.witnessLine(line);
     [a, b].forEach(function (v, i) {
       v.state = 'social';
@@ -252,6 +281,9 @@
 
   function update(dt) {
     global.Relationships.decay(dt);
+    global.Relationships.applyRoommatePassive(villagers, dt); // 16-5 동거 패시브 상승
+    var toRemove = [];
+
     villagers.forEach(function (v) {
       updateNeeds(v, dt);
       updateMovement(v, dt);
@@ -283,8 +315,31 @@
         v.assetCheckAcc = 0;
         global.Assets.checkPurchase(v);
       }
+
+      // 16-2 "떠날 준비" 기간이 끝나면 마을 가장자리로 강제 이동시킨다.
+      if (v.leaving && v.leavingPhase === 'preparing') {
+        v.leavingTimer += dt;
+        if (v.leavingTimer >= v.leavingDuration) {
+          v.leavingPhase = 'departing';
+          v.state = 'move';
+          v.targetType = 'leaving';
+          v.targetObject = null;
+          v.targetX = (v.x < global.World.WORLD_WIDTH_PX / 2) ? 0 : global.World.WORLD_WIDTH_PX;
+        }
+      }
+      if (v.readyToRemove) toRemove.push(v);
     });
+
+    toRemove.forEach(function (v) {
+      var building = global.Village.getBuildings().filter(function (b) { return b.slotIndex === v.homeSlotIndex; })[0];
+      if (building) building.residentCount = Math.max(0, building.residentCount - 1);
+      global.Journal.logDeparture(v);
+      global.Names.release(v.name);
+      removeVillager(v.id);
+    });
+
     global.BuildingLifecycle.update(dt, villagers);
+    global.Migration.update(dt, villagers);
   }
 
   function getVillagers() { return villagers; }
@@ -306,6 +361,9 @@
     update: update,
     getVillagers: getVillagers,
     getPersonality: getPersonality,
+    spawnMigrant: spawnMigrant,
+    removeVillager: removeVillager,
+    forceSocial: forceSocial,
     serialize: serialize,
     restore: restore
   };
