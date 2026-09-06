@@ -9,13 +9,19 @@
     return Math.floor(min + Math.random() * (max - min + 1));
   }
 
+  function resolveCapacity(era) {
+    // 근대는 건물별 1~2명 랜덤(6-1) - 짓는 시점에 고정해 저장.
+    if (era.residentsPerBuilding == null) return randInt(1, 2);
+    return era.residentsPerBuilding;
+  }
+
   function initDay0() {
     var primitive = global.ERAS[0];
     populationCap = randInt(primitive.populationCapRange[0], primitive.populationCapRange[1]);
     buildings = [];
     // 6-3: 시작 건물 2채(3명+1명 배분), 전부 gradeIndex 0.
-    buildings.push({ slotIndex: 0, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 3 });
-    buildings.push({ slotIndex: 1, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 1 });
+    buildings.push({ slotIndex: 0, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 3, capacity: 3, ageDecay: 0 });
+    buildings.push({ slotIndex: 1, occupied: true, builtEraId: primitive.id, gradeIndex: 0, residentCount: 1, capacity: primitive.residentsPerBuilding, ageDecay: 0 });
   }
 
   function getBuildings() {
@@ -29,6 +35,18 @@
   function findEraById(id) {
     for (var i = 0; i < global.ERAS.length; i++) if (global.ERAS[i].id === id) return global.ERAS[i];
     return global.ERAS[0];
+  }
+
+  // 17-1 신축 — buildingLifecycle.js가 빈 슬롯에 새 건물을 세울 때 사용.
+  function constructBuilding(slotIndex, era) {
+    var b = { slotIndex: slotIndex, occupied: true, builtEraId: era.id, gradeIndex: 0, residentCount: 0, capacity: resolveCapacity(era), ageDecay: 0 };
+    buildings.push(b);
+    return b;
+  }
+
+  // 17-3 철거 — 빈 집(residentCount 0)만 대상.
+  function demolishBuilding(slotIndex) {
+    buildings = buildings.filter(function (b) { return b.slotIndex !== slotIndex; });
   }
 
   // 6-2: 배경 팔레트는 즉시 전환하지 않고 "현재 서 있는 건물들의 builtEraId 다수결"로 정한다.
@@ -62,6 +80,9 @@
     getBuildings: getBuildings,
     getPopulationCap: getPopulationCap,
     getMajorityEra: getMajorityEra,
+    findEraById: findEraById,
+    constructBuilding: constructBuilding,
+    demolishBuilding: demolishBuilding,
     serialize: serialize,
     restore: restore
   };

@@ -72,10 +72,27 @@
       if (b && b.occupied) {
         var era = global.ERAS.filter(function (e) { return e.id === b.builtEraId; })[0] || global.WorldState.currentEra;
         global.BuildingSprites.draw(ctx, era, b.gradeIndex, cell, sx, gy);
+        drawHomeAssets(b, era, sx, gy);
       } else {
         global.BuildingSprites.drawEmptyLot(ctx, cell, sx, gy);
       }
     });
+  }
+
+  // 19장: 이 집에 사는 주민 중 가축/차량 보유자가 있으면 마당에 표시.
+  // 차량은 소유자가 이동 중이 아닐 때만(19-2 "유휴 시 거주지 앞에 주차").
+  function drawHomeAssets(b, era, sx, gy) {
+    if (!global.Villagers) return;
+    var residents = global.Villagers.getVillagers().filter(function (v) { return v.homeSlotIndex === b.slotIndex; });
+    var assetCell = pixelScale * WORLD_UNIT * 0.5;
+    var withLivestock = residents.filter(function (v) { return v.assets.livestock; })[0];
+    if (withLivestock) {
+      global.AssetSprites.drawLivestock(ctx, assetCell, sx - global.BuildingSprites.GRID_W * pixelScale * WORLD_UNIT * 0.35, gy, withLivestock.assets.livestock);
+    }
+    var withVehicle = residents.filter(function (v) { return v.assets.vehicle && v.state !== 'move'; })[0];
+    if (withVehicle) {
+      global.AssetSprites.drawVehicle(ctx, assetCell, sx + global.BuildingSprites.GRID_W * pixelScale * WORLD_UNIT * 0.35, gy, era);
+    }
   }
 
   // 10장 감정 표시 — 교류>작업>욕구 우선순위, 욕구는 60 이상일 때만(60~79/80~100 2단계)

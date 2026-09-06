@@ -46,7 +46,11 @@
       tickInterval: randRange(4, 8),
       needs: { hunger: 0, fatigue: 0, loneliness: 0, vanity: 0 },
       speechText: null,
-      socialPartnerId: null
+      socialPartnerId: null,
+      wealth: 0,
+      assets: { livestock: null, vehicle: null },
+      recentFarmWork: [], // 19-1 가축 구매 조건용 - {field,hearth} 작업 완료 날짜 기록
+      assetCheckAcc: 0
     };
     villagers.push(v);
     return v;
@@ -148,8 +152,23 @@
     v.stateTimer = 0;
   }
 
+  // 18-1 wealth 증가 공식: 오브젝트 기본값 x 시대 배율 x 성격 배율
+  function applyWorkWealth(v) {
+    var obj = v.targetObject;
+    if (!obj) return;
+    var era = global.WorldState.currentEra;
+    var range = era.workWealth[obj.type];
+    if (!range) return;
+    var p = getPersonality(v);
+    v.wealth += randRange(range[0], range[1]) * era.wealthMultiplier * p.wealthMul;
+    if (obj.type === 'field' || obj.type === 'hearth') {
+      v.recentFarmWork.push(global.Time.getEraDays());
+    }
+  }
+
   function endWork(v) {
     v.needs.hunger = clampNeed(v.needs.hunger - randRange(40, 60));
+    applyWorkWealth(v);
     v.state = 'rest';
     v.stateTimer = 0;
     v.minStateDuration = randRange(5, 8);
@@ -221,7 +240,8 @@
     var dx = v.targetX - v.x;
     var dir = dx > 0 ? 1 : -1;
     v.facing = dir;
-    var step = MOVE_SPEED * dt;
+    var speed = v.assets.vehicle ? MOVE_SPEED * 2 : MOVE_SPEED; // 19-2 차량 보유 시 이동 속도 x2
+    var step = speed * dt;
     if (Math.abs(dx) <= step) {
       v.x = v.targetX;
       arriveAtDestination(v);
@@ -257,7 +277,14 @@
         v.stateTimer = 0;
         v.minStateDuration = randRange(5, 8);
       }
+
+      v.assetCheckAcc += dt;
+      if (v.assetCheckAcc >= 7) { // 19장 가축/차량 구매 판정 주기(7일)
+        v.assetCheckAcc = 0;
+        global.Assets.checkPurchase(v);
+      }
     });
+    global.BuildingLifecycle.update(dt, villagers);
   }
 
   function getVillagers() { return villagers; }

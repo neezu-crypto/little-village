@@ -58,10 +58,14 @@
       var label = global.Relationships.tierLabel(closest.value);
       if (partner && label) closestLine = '<div class="vp-row">가장 가까운 사이: ' + partner.name + '(' + label + ')</div>';
     }
+    var assetLine = '';
+    if (v.assets.livestock) assetLine += '<div class="vp-row">가축을 기르고 있어요</div>';
+    if (v.assets.vehicle) assetLine += '<div class="vp-row">' + v.assets.vehicle + '을(를) 갖고 있어요</div>';
     panel.innerHTML =
       '<div class="vp-name">' + v.name + '</div>' +
       '<div class="vp-row">' + PERSONALITY_LABEL[v.personalityId] + '</div>' +
       '<div class="vp-row">' + statePhrase(v) + '</div>' +
+      assetLine +
       closestLine;
     panel.classList.remove('hidden');
     var x = Math.min(window.innerWidth - 180, Math.max(8, screenX - 90));
