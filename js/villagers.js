@@ -5,8 +5,14 @@
   var villagers = [];
   var nextId = 1;
   var WORK_TYPES = ['field', 'well', 'hearth', 'shop'];
-  var ENCOUNTER_RADIUS = 40; // world px, 문서에 없는 구현 기본값
+  var ENCOUNTER_RADIUS = 60; // world px, 문서에 없는 구현 기본값
   var MOVE_SPEED = 40; // world px/sec, 문서에 없는 구현 기본값
+  // 8-5 "매 틱 30%"를 원래 각 주민의 개별 NPC Tick(4~8초, 서로 비동기)에
+  // 스냅샷으로 걸었더니, 두 주민이 실제로 스쳐 지나가도 그 순간이 어느 한쪽의
+  // 틱 타이밍과 우연히 안 겹치면 대부분 놓치는 버그가 시뮬레이션으로 확인됨.
+  // 근접해 있는 "동안" 매초 반복 판정하도록 바꾸고(6초당 30%와 등가인 초당
+  // 확률로 환산), 인카운터 감지 자체는 매 프레임 연속으로 하도록 수정.
+  var ENCOUNTER_CHANCE_PER_SEC = 0.0585; // 1-(1-0.30)^(1/6)
 
   function randRange(min, max) { return min + Math.random() * (max - min); }
   function clampNeed(v) { return Math.max(0, Math.min(100, v)); }
@@ -38,7 +44,9 @@
       targetObject: null,
       tickAcc: 0,
       tickInterval: randRange(4, 8),
-      needs: { hunger: 0, fatigue: 0, loneliness: 0, vanity: 0 }
+      needs: { hunger: 0, fatigue: 0, loneliness: 0, vanity: 0 },
+      speechText: null,
+      socialPartnerId: null
     };
     villagers.push(v);
     return v;
@@ -161,10 +169,15 @@
 
   function startSocial(a, b) {
     var duration = randRange(8, 15);
-    [a, b].forEach(function (v) {
+    var currentAffinity = global.Relationships.get(a.id, b.id);
+    var line = global.Dialogue.pickLine(global.Relationships.tierKey(currentAffinity));
+    global.Journal.witnessLine(line);
+    [a, b].forEach(function (v, i) {
       v.state = 'social';
       v.stateTimer = 0;
       v.minStateDuration = duration;
+      v.socialPartnerId = (i === 0 ? b.id : a.id);
+      v.speechText = line;
     });
   }
 
@@ -174,7 +187,7 @@
     return 0;
   }
 
-  // ---------- NPC Tick(4~8초) 시점에만 확률 판정 ----------
+  // ---------- NPC Tick(4~8초)마다 확률 판정 (휴식→이동/작업 종료) ----------
   function onTick(v) {
     if (v.state === 'rest') {
       if (v.stateTimer < v.minStateDuration) return;
@@ -183,17 +196,17 @@
     } else if (v.state === 'work') {
       if (v.stateTimer < v.minStateDuration) return;
       if (Math.random() < 0.20) endWork(v);
-    } else if (v.state === 'move') {
-      checkEncounter(v);
     }
   }
 
-  function checkEncounter(v) {
+  // 근접해 있는 "동안" 매 프레임 연속으로 판정(위 상단 주석 참고) - 6초당
+  // 30%와 등가인 초당 확률로 환산해 dt에 비례시킨다.
+  function checkEncounter(v, dt) {
     for (var i = 0; i < villagers.length; i++) {
       var other = villagers[i];
       if (other === v || other.state !== 'move') continue;
       if (Math.abs(other.x - v.x) > ENCOUNTER_RADIUS) continue;
-      var chance = 0.30 + compatBonus(v, other);
+      var chance = (ENCOUNTER_CHANCE_PER_SEC + compatBonus(v, other)) * dt;
       if (Math.random() < chance) {
         startSocial(v, other);
         return;
@@ -203,6 +216,8 @@
 
   function updateMovement(v, dt) {
     if (v.state !== 'move' || v.targetX === null) return;
+    checkEncounter(v, dt);
+    if (v.state !== 'move') return; // 이번 프레임에 교류로 전이됐으면 이동 계산 중단
     var dx = v.targetX - v.x;
     var dir = dx > 0 ? 1 : -1;
     v.facing = dir;
@@ -216,6 +231,7 @@
   }
 
   function update(dt) {
+    global.Relationships.decay(dt);
     villagers.forEach(function (v) {
       updateNeeds(v, dt);
       updateMovement(v, dt);
@@ -230,6 +246,13 @@
 
       if (v.state === 'social' && v.stateTimer >= v.minStateDuration) {
         v.needs.loneliness = clampNeed(v.needs.loneliness - 50);
+        // 쌍당 한 번만 기록되도록 id가 더 작은 쪽에서만 처리.
+        if (v.socialPartnerId != null && v.id < v.socialPartnerId) {
+          var partner = villagers.filter(function (o) { return o.id === v.socialPartnerId; })[0];
+          if (partner) global.Relationships.recordInteraction(v.id, partner.id, v.personalityId, partner.personalityId);
+        }
+        v.speechText = null;
+        v.socialPartnerId = null;
         v.state = 'rest';
         v.stateTimer = 0;
         v.minStateDuration = randRange(5, 8);

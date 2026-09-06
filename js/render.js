@@ -5,6 +5,7 @@
 
   var pixelScale = 1;
   var GROUND_Y_RATIO = 0.78;
+  var FONT_STACK = '-apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif'; // 25-3
 
   function resize() {
     canvas.width = window.innerWidth;
@@ -77,16 +78,53 @@
     });
   }
 
+  // 10장 감정 표시 — 교류>작업>욕구 우선순위, 욕구는 60 이상일 때만(60~79/80~100 2단계)
+  var NEED_EMOJI = {
+    hunger: ['🍞', '😋'],
+    fatigue: ['😪', '😴'],
+    loneliness: ['🥺', '💭'],
+    vanity: ['✨', '😏']
+  };
+
+  function getIndicator(v) {
+    if (v.state === 'social') return '💬';
+    if (v.state === 'work') return '🔨';
+    var needs = v.needs, maxKey = null, maxVal = 0;
+    ['hunger', 'fatigue', 'loneliness', 'vanity'].forEach(function (k) {
+      if (needs[k] > maxVal) { maxVal = needs[k]; maxKey = k; }
+    });
+    if (maxKey && maxVal >= 60) return NEED_EMOJI[maxKey][maxVal >= 80 ? 1 : 0];
+    return null;
+  }
+
   function drawVillagers(cameraX) {
     if (!global.Villagers) return;
     var cell = pixelScale * global.CharacterSprites.UNIT;
     var gy = groundScreenY();
+    var headY = gy - global.CharacterSprites.GRID_H * cell;
+    ctx.textAlign = 'center';
     global.Villagers.getVillagers().forEach(function (v) {
       var sx = worldToScreenX(v.x, cameraX);
       var margin = global.CharacterSprites.GRID_W * cell;
       if (sx < -margin || sx > canvas.width + margin) return;
       global.CharacterSprites.draw(ctx, cell, sx, gy, v.facing);
+
+      var indicator = getIndicator(v);
+      if (indicator) {
+        ctx.font = Math.round(14 * pixelScale / 3) + 'px sans-serif';
+        ctx.fillText(indicator, sx, headY - 4);
+      }
+      if (v.state === 'social' && v.speechText) {
+        ctx.font = Math.round(11 * pixelScale / 3) + 'px ' + FONT_STACK;
+        var textW = ctx.measureText(v.speechText).width;
+        var boxY = headY - 24;
+        ctx.fillStyle = 'rgba(20,18,14,0.75)';
+        ctx.fillRect(sx - textW / 2 - 6, boxY - 14, textW + 12, 18);
+        ctx.fillStyle = '#eee7d8';
+        ctx.fillText(v.speechText, sx, boxY);
+      }
     });
+    ctx.textAlign = 'left';
   }
 
   function draw() {

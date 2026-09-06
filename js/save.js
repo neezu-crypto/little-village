@@ -2,11 +2,11 @@
 // collectState/applyState는 이후 단계(주민·건물 등)가 생길 때마다 필드를 늘려간다.
 (function (global) {
   var SAVE_KEY = 'littleVillageSave';
-  // 2: villagers 필드 추가(5단계) - 그 이전 저장은 village/villagers가 없어
-  // 그대로 복원하면 Day0 스폰이 영영 안 도는 버그가 있었다. 앞으로도 저장
-  // 구조가 바뀌면(필드 추가/제거) 반드시 이 값을 올려서 구버전 저장을
-  // 거부하고 새로 스폰하게 한다.
-  var SCHEMA_VERSION = 2;
+  // 2: villagers 필드 추가(5단계). 3: relationships/journal 필드 추가(6단계).
+  // 저장 구조가 바뀌면(필드 추가/제거) 반드시 이 값을 올려서 구버전 저장을
+  // 거부하고 새로 스폰하게 한다 - 5단계에서 이걸 빠뜨려 주민이 영영 0명으로
+  // 남는 버그가 났었다.
+  var SCHEMA_VERSION = 3;
   var AUTOSAVE_INTERVAL = 10; // seconds
   var indicator = document.getElementById('saveIndicator');
   var tabNotice = document.getElementById('tabConflictNotice');
@@ -19,7 +19,9 @@
       cyclePhase: global.Time.getCyclePhase(),
       cameraX: global.Camera.x,
       village: global.Village.serialize(),
-      villagers: global.Villagers.serialize()
+      villagers: global.Villagers.serialize(),
+      relationships: global.Relationships.serialize(),
+      journal: global.Journal.serialize()
     };
   }
 
@@ -30,6 +32,8 @@
     if (typeof state.cameraX === 'number') global.Camera.setX(state.cameraX);
     global.Village.restore(state.village);
     global.Villagers.restore(state.villagers);
+    global.Relationships.restore(state.relationships);
+    global.Journal.restore(state.journal);
     return true;
   }
 
