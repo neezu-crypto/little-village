@@ -16,10 +16,14 @@
       var deltaTime = Math.min(0.1, (now - lastTime) / 1000); // 탭 전환 후 급점프 방지
       lastTime = now;
 
+      // 배속은 시뮬레이션(시간/주민 AI)에만 곱한다 - 카메라 조작감과 자동저장
+      // 주기(실제 10초)는 배속과 무관하게 실시간 그대로 유지.
+      var simDeltaTime = deltaTime * global.GameSpeed.getMultiplier();
+
       global.Camera.update(deltaTime);
       if (global.Mobile && global.Mobile.updateMomentum) global.Mobile.updateMomentum(deltaTime);
-      global.Time.update(deltaTime);
-      global.Villagers.update(deltaTime);
+      global.Time.update(simDeltaTime);
+      global.Villagers.update(simDeltaTime);
       global.Save.update(deltaTime);
       syncEra();
       global.Render.draw();

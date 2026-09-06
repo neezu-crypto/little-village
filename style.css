@@ -134,6 +134,14 @@ html, body {
   right: 10px;
 }
 
+.speed-btn {
+  left: auto;
+  right: 56px;
+  width: 44px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .popover {
   position: absolute;
   z-index: 40;
