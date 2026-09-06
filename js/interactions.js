@@ -113,9 +113,18 @@
     journalList.innerHTML = html;
   }
 
-  journalBtn.addEventListener('click', function () {
+  journalBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
     journalPanel.classList.toggle('open');
     if (journalPanel.classList.contains('open')) renderJournal();
+  });
+
+  // 패널이 열리면 그 패널(z-index가 더 높음)이 토글 버튼을 덮어버려서 버튼을
+  // 다시 눌러 닫을 수 없었다 - 패널 바깥 아무 곳이나 클릭해도 닫히게 한다.
+  document.addEventListener('click', function (e) {
+    if (!journalPanel.classList.contains('open')) return;
+    if (journalPanel.contains(e.target) || e.target === journalBtn) return;
+    journalPanel.classList.remove('open');
   });
 
   global.Journal.onChange(function () {
